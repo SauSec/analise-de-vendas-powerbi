@@ -2,16 +2,18 @@ import pandas as pd
 import random
 from faker import Faker
 from datetime import datetime
+import sqlite3 
 
 fake = Faker('pt_BR')
 
-# --- Geração de dados de produtos ---
+# --- Primeira etapa: Geração dos arquivos csv ---
 
+# --- Geração de dados de produtos ---
 num_produtos = 50
 categorias_produtos = ['Eletrônicos', 'Livros', 'Roupas', 'Alimentos', 'Ferramentas']
 lista_produtos = []
 
-print("Iniciando a geração de dados de produtos...")
+print("Primeira etapa: Iniciando a geração de dados de produtos...")
 for i in range(1, num_produtos + 1):
     produto = {
         'id_produto': i,
@@ -22,13 +24,11 @@ for i in range(1, num_produtos + 1):
     lista_produtos.append(produto)
 
 df_produtos = pd.DataFrame(lista_produtos)
-df_produtos.to_csv('produtos.csv', index=False, encoding='utf-8')
-print(f"Arquivo 'produtos.csv' com {num_produtos} produtos gerado com sucesso!")
+df_produtos.to_csv('data/raw/produtos.csv', index=False, encoding='utf-8')
+print("Arquivo 'produtos.csv' gerado em data/raw/")
 print("-" * 50)
 
-
 # --- Geração de dados de clientes ---
-
 num_clientes = 200
 segmentos_clientes = ['Pessoa Física', 'Pessoa Jurídica']
 lista_clientes = []
@@ -45,32 +45,21 @@ for i in range(1, num_clientes + 1):
     lista_clientes.append(cliente)
 
 df_clientes = pd.DataFrame(lista_clientes)
-df_clientes.to_csv('clientes.csv', index=False, encoding='utf-8')
-print(f"Arquivo 'clientes.csv' com {num_clientes} clientes gerado com sucesso!")
+df_clientes.to_csv('data/raw/clientes.csv', index=False, encoding='utf-8')
+print("Arquivo 'clientes.csv' gerado com em data/raw/")
 print("-" * 50)
 
-
 # --- Geração de dados de vendas ---
-
-num_vendas = 5000 
-
+num_vendas = 5000
 lista_vendas = []
 
 print("Iniciando a geração de dados de vendas...")
-
-# Loop para criar cada registro de venda
 for i in range(1, num_vendas + 1):
-    # Sorteia um produto e um cliente
     id_produto_selecionado = random.randint(1, num_produtos)
     id_cliente_selecionado = random.randint(1, num_clientes)
-    
-    # Pega o custo do produto sorteado para calcular o preço de venda
     custo = df_produtos.loc[df_produtos['id_produto'] == id_produto_selecionado, 'custo_produto'].iloc[0]
-    
-    # Calcula o preço de venda com uma margem de lucro entre 20% e 80%
     margem_lucro = random.uniform(1.2, 1.8)
     preco_venda = round(custo * margem_lucro, 2)
-    
     venda = {
         'id_venda': i,
         'id_produto': id_produto_selecionado,
@@ -81,12 +70,25 @@ for i in range(1, num_vendas + 1):
     }
     lista_vendas.append(venda)
 
-# Convertendo a lista de dicionários em um DataFrame do pandas
 df_vendas = pd.DataFrame(lista_vendas)
+df_vendas.to_csv('data/raw/vendas.csv', index=False, encoding='utf-8')
+print("Arquivo 'vendas.csv' gerado com sucesso em data/raw/")
+print("-" * 50)
 
-# Salvando o DataFrame em um arquivo CSV
-df_vendas.to_csv('vendas.csv', index=False, encoding='utf-8')
 
-print(f"Arquivo 'vendas.csv' com {num_vendas} vendas gerado com sucesso!")
-print("\nAmostra dos dados de vendas gerados:")
-print(df_vendas.head())
+# --- Segunda Etapa: Salvando dados no banco de dados SQLite ---
+
+print("\nETAPA 2: Iniciando a criação do banco de dados SQLite...")
+
+# Caminho para o banco de dados na pasta de dados processados
+path_db = 'data/processed/varejo.db'
+
+# Criando a conexão com o banco de dados
+conn = sqlite3.connect(path_db)
+df_produtos.to_sql('produtos', conn, if_exists='replace', index=False)
+df_clientes.to_sql('clientes', conn, if_exists='replace', index=False)
+df_vendas.to_sql('vendas', conn, if_exists='replace', index=False)
+
+conn.close()
+
+print(f"Banco de dados '{path_db}' criado com as tabelas: produtos, clientes, vendas.")
